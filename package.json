@@ -1,0 +1,22 @@
+{
+  "name": "nest-drf",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@prisma/client": "^5.17.0",
+    "class-validator": "^0.14.1",
+    "handlebars": "^4.7.8",
+    "prisma": "^5.17.0",
+    "ts-morph": "^23.0.0"
+  },
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.5.4"
+  }
+}
