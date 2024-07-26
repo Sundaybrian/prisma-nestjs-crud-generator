@@ -1,4 +1,4 @@
-import { Project, OptionalKind, DecoratorStructure } from 'ts-morph';
+import { Project, OptionalKind, DecoratorStructure, StructureKind } from 'ts-morph';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -194,8 +194,9 @@ const generateDtosAndEntities = async () => {
                     {
 
                         name: 'prisma', type: 'PrismaService',
-                        decorators: [{ name: 'Inject', arguments: ['PrismaService'] }],
+                        // decorators: [{ name: 'Inject', arguments: ['PrismaService'] }],
                         isReadonly: true,
+                        leadingTrivia: "private "
                         // scope: "",
                     },
                 ],
@@ -305,16 +306,26 @@ const generateDtosAndEntities = async () => {
             decorators: [
                 { name: 'Controller', arguments: [`'${modelFolderName}'`] },
                 { name: 'ApiTags', arguments: [`'${modelFolderName}'`] },
+                { name: 'ApiBearerAuth', arguments: [] },
+                { name: 'UseGuards', arguments: ['JwtGuard'] },
             ],
             ctors: [{
                 parameters: [
-                    { name: `${modelFolderName}Service`, type: `${modelName}Service`, decorators: [{ name: 'Inject', arguments: [`${modelName}Service`] }] },
+                    {
+                        name: `${modelFolderName}Service`, type: `${modelName}Service`,
+                        isReadonly: true,
+                        leadingTrivia: "private "
+                    },
                 ],
             }],
             methods: [
                 {
                     name: 'create',
-                    decorators: [{ name: 'Post', arguments: [] }],
+                    decorators: [
+                        { name: 'Post', arguments: [] },
+                        { name: 'ApiOperation', arguments: [`{ summary: 'Create a new - ${modelFolderName.toLowerCase()}' }`] },
+                        { name: 'ApiOkResponse', arguments: [`{ type: ${modelName}Entity }`] },
+                    ],
                     parameters: [
                         { name: 'createDto', type: `Create${modelName}Dto`, decorators: [{ name: 'Body', arguments: [] }] },
                     ],
@@ -322,7 +333,11 @@ const generateDtosAndEntities = async () => {
                 },
                 {
                     name: 'findAll',
-                    decorators: [{ name: 'Post', arguments: ['search'] }],
+                    decorators: [
+                        { name: 'Post', arguments: [`'search'`] },
+                        { name: 'ApiOperation', arguments: [`{ summary: 'Search - ${modelFolderName.toLowerCase()}' }`] },
+                        { name: 'ApiOkResponse', arguments: [`{ type: ${modelName}Entity }`] },
+                    ],
                     parameters: [
                         { name: 'query', type: `${modelName}SearchQuery`, decorators: [{ name: 'Body', arguments: [] }] },
                     ],
@@ -330,26 +345,38 @@ const generateDtosAndEntities = async () => {
                 },
                 {
                     name: 'findOne',
-                    decorators: [{ name: 'Get', arguments: [':id'] }],
+                    decorators: [
+                        { name: 'Get', arguments: [`':id'`] },
+                        { name: 'ApiOperation', arguments: [`{ summary: 'fetch a - ${modelFolderName.toLowerCase()}' }`] },
+                        { name: 'ApiOkResponse', arguments: [`{ type: ${modelName}Entity }`] },
+                    ],
                     parameters: [
-                        { name: 'id', type: 'string', decorators: [{ name: 'Param', arguments: ['id'] }] },
+                        { name: 'id', type: 'string', decorators: [{ name: 'Param', arguments: [`'id'`] }] },
                     ],
                     statements: `return this.${modelFolderName}Service.findOne(+id);`,
                 },
                 {
                     name: 'update',
-                    decorators: [{ name: 'Patch', arguments: [':id'] }],
+                    decorators: [
+                        { name: 'Patch', arguments: [`':id'`] },
+                        { name: 'ApiOperation', arguments: [`{ summary: 'update an existing - ${modelFolderName.toLowerCase()}' }`] },
+                        { name: 'ApiOkResponse', arguments: [`{ type: ${modelName}Entity }`] },
+                    ],
                     parameters: [
-                        { name: 'id', type: 'string', decorators: [{ name: 'Param', arguments: ['id'] }] },
+                        { name: 'id', type: 'string', decorators: [{ name: 'Param', arguments: [`'id'`] }] },
                         { name: 'updateDto', type: `Update${modelName}Dto`, decorators: [{ name: 'Body', arguments: [] }] },
                     ],
                     statements: `return this.${modelFolderName}Service.update(+id, updateDto);`,
                 },
                 {
                     name: 'remove',
-                    decorators: [{ name: 'Delete', arguments: [':id'] }],
+                    decorators: [
+                        { name: 'Delete', arguments: [`':id'`] },
+                        { name: 'ApiOperation', arguments: [`{ summary: 'delete an existing - ${modelFolderName.toLowerCase()}' }`] },
+                        { name: 'ApiOkResponse', arguments: [`{ type: ${modelName}Entity }`] },
+                    ],
                     parameters: [
-                        { name: 'id', type: 'string', decorators: [{ name: 'Param', arguments: ['id'] }] },
+                        { name: 'id', type: 'string', decorators: [{ name: 'Param', arguments: [`'id'`] }] },
                     ],
                     statements: `return this.${modelFolderName}Service.remove(+id);`,
                 },
@@ -359,6 +386,10 @@ const generateDtosAndEntities = async () => {
         controllerFile.addImportDeclaration({
             namedImports: ['Controller', 'Post', 'Get', 'Patch', 'Delete', 'Body', 'Param'],
             moduleSpecifier: '@nestjs/common',
+        });
+        controllerFile.addImportDeclaration({
+            namedImports: ['ApiBearerAuth', 'ApiTags', 'ApiOkResponse', 'ApiOperation', 'ApiQuery', 'ApiBody', 'ApiCreatedResponse',],
+            moduleSpecifier: '@nestjs/swagger',
         });
         controllerFile.addImportDeclaration({
             namedImports: [`${modelName}Service`],
@@ -375,6 +406,10 @@ const generateDtosAndEntities = async () => {
         controllerFile.addImportDeclaration({
             namedImports: [`${modelName}SearchQuery`],
             moduleSpecifier: `./entities/${modelFolderName}.search`,
+        });
+        controllerFile.addImportDeclaration({
+            namedImports: [`${modelName}Entity`],
+            moduleSpecifier: `./entities/${modelFolderName.toLowerCase()}.entity`,
         });
 
         // Module file creation
