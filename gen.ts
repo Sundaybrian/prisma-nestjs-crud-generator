@@ -39,6 +39,16 @@ const generateDtosAndEntities = async () => {
     const modelRegex = /model\s+(\w+)\s+\{([^}]+)\}/g;
     const models = [...schemaContent.matchAll(modelRegex)];
 
+    // Extract enums from the schema
+    // Extract enums from the schema
+    const enumRegex = /enum\s+(\w+)\s+\{([^}]+)\}/g;
+    const enums = [...schemaContent.matchAll(enumRegex)].reduce((acc, enumMatch) => {
+        const enumName = enumMatch[1];
+        const enumValues = enumMatch[2].split('\n').map(value => value.trim()).filter(value => value && !value.startsWith('//'));
+        acc[enumName] = enumValues;
+        return acc;
+    }, {} as Record<string, string[]>);
+
     // Initialize ts-morph project
     const project = new Project();
 
@@ -83,6 +93,7 @@ const generateDtosAndEntities = async () => {
         );
 
         // Define DTO classes
+        // Define DTO properties
         const dtoProperties = modelBody.split('\n').map((line) => {
             line = line.trim();
             if (!line || line.startsWith('//')) {
@@ -94,13 +105,18 @@ const generateDtosAndEntities = async () => {
                 return null;
             }
 
-            const { tsType, decorator } = prismaTypeToTsTypeAndDecorator(type.split('?')[0]);
+            const isEnum = Object.keys(enums).includes(type);
+            const { tsType, decorator } = isEnum
+                ? { tsType: type, decorator: '@IsEnum(' + type + ')' }
+                : prismaTypeToTsTypeAndDecorator(type.split('?')[0]);
+
             const isOptional = type.includes('?');
             const isArray = type.endsWith('[]');
 
             const classValidators: OptionalKind<DecoratorStructure>[] = [
                 isOptional && { name: 'IsOptional', arguments: [] },
-                { name: decorator, arguments: [] },
+                isEnum && { name: 'IsEnum', arguments: [type] },
+                !isEnum && { name: decorator, arguments: [] },
             ].filter(Boolean) as OptionalKind<DecoratorStructure>[];
 
             if (isArray) {
@@ -109,7 +125,9 @@ const generateDtosAndEntities = async () => {
 
             const swaggerDecorator: OptionalKind<DecoratorStructure> = {
                 name: 'ApiProperty',
-                arguments: [`{ required: ${!isOptional} }`],
+                arguments: [
+                    `{ required: ${!isOptional} ${isEnum ? ', enum: ' + type : ''} }`
+                ],
             };
 
             return {
@@ -118,8 +136,9 @@ const generateDtosAndEntities = async () => {
                 hasQuestionToken: isOptional,
                 classValidators,
                 swaggerDecorator,
+                isEnum,
             };
-        }).filter(Boolean); // Filter out null values
+        }).filter(Boolean); // Filter out null values // Filter out null values
 
         // Create DTO class for Create operation
         // Define properties to exclude for the Create DTO
@@ -135,7 +154,8 @@ const generateDtosAndEntities = async () => {
                     type: prop.type,
                     hasQuestionToken: prop.hasQuestionToken,
                     decorators: [...prop.classValidators, prop.swaggerDecorator],
-                })),
+                }))
+                
         });
 
         // Create DTO class for Update operation using PartialType
@@ -145,11 +165,36 @@ const generateDtosAndEntities = async () => {
             extends: `PartialType(Create${modelName}Dto)`,
         });
 
+        // Add imports for enums if needed
+        const enumImports = dtoProperties
+            .filter(prop => prop.isEnum)
+            .map(prop => prop.type);
+
+        enumImports.forEach(enumName => {
+            createDtoFile.addImportDeclaration({
+                namedImports: [enumName],
+                moduleSpecifier: `@prisma/client`,
+            });
+        });
+
         // Add class-validator and swagger imports
+        // createDtoFile.addImportDeclaration({
+        //     namedImports: ['IsOptional', 'IsString', 'IsInt', 'IsBoolean', 'IsDate', 'IsNumber', 'IsObject', 'IsArray', 'IsEnum'],
+        //     moduleSpecifier: 'class-validator',
+        // });
+
+        // Determine unique decorators needed
+        const uniqueDecorators = new Set<string>();
+        dtoProperties.forEach(prop => {
+            prop.classValidators.forEach(decorator => uniqueDecorators.add(decorator.name));
+        });
+
+        // Add class-validator and Swagger imports dynamically
         createDtoFile.addImportDeclaration({
-            namedImports: ['IsOptional', 'IsString', 'IsInt', 'IsBoolean', 'IsDate', 'IsNumber', 'IsObject', 'IsArray'],
+            namedImports: Array.from(uniqueDecorators),
             moduleSpecifier: 'class-validator',
         });
+
         createDtoFile.addImportDeclaration({
             namedImports: ['ApiProperty'],
             moduleSpecifier: '@nestjs/swagger',
