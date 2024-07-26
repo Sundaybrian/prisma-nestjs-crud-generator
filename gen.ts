@@ -115,6 +115,13 @@ const generateDtosAndEntities = async () => {
                 { overwrite: true }
             );
 
+            // Create source file for the entity
+            const searchEntityFile = project.createSourceFile(
+                path.join(entityFolderPath, `${modelName.toLowerCase()}.search.ts`),
+                {},
+                { overwrite: true }
+            );
+
             // Define DTO classes
             // Define DTO properties
             const dtoProperties = modelBody.split('\n').map((line) => {
@@ -244,11 +251,22 @@ const generateDtosAndEntities = async () => {
                 })),
             });
 
+            searchEntityFile.addClass({
+                name: `${modelName}SearchQuery`,
+                isExported: true,
+                extends: `SearchQuery`,
+            });
+
             // Add swagger import for entities
             entityFile.addImportDeclaration({
                 namedImports: ['ApiProperty'],
                 moduleSpecifier: '@nestjs/swagger',
             });
+
+            searchEntityFile.addImportDeclaration({
+                namedImports: ['SearchQuery'],
+                moduleSpecifier: "src/shared/paginations"
+            })
 
 
             // Service file creation
@@ -457,7 +475,7 @@ const generateDtosAndEntities = async () => {
             });
 
             controllerFile.addImportDeclaration({
-                namedImports: ['Controller', 'Post', 'Get', 'Patch', 'Delete', 'Body', 'Param'],
+                namedImports: ['Controller', 'Post', 'Get', 'Patch', 'Delete', 'Body', 'Param', 'UseGuards'],
                 moduleSpecifier: '@nestjs/common',
             });
             controllerFile.addImportDeclaration({
@@ -522,6 +540,7 @@ const generateDtosAndEntities = async () => {
             createDtoFile.saveSync();
             updateDtoFile.saveSync();
             entityFile.saveSync();
+            searchEntityFile.saveSync()
 
             serviceFile.saveSync();
             controllerFile.saveSync();
