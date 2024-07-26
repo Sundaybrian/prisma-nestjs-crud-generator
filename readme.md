@@ -4,6 +4,11 @@
 
 - you can then step in and add any business logic
 
+- simply copy the gen.ts file to the root of your project. future implementation will be a cli
+
+## dependencies
+- class-validator, @nestjs/swagger, ts-morph, ts-node 
+
 
 ## run for one or more models
 - make clean && ts-node index.ts ModelName1 ModelName2 
