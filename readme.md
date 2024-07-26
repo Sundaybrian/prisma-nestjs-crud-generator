@@ -16,6 +16,37 @@
 ## run for all models
 - make clean && ts-node index.ts 
 
+
+### guards
+- this guard is located as the import suggests, future optional will be opt in
+
+```ts
+import { ExecutionContext, Injectable } from "@nestjs/common";
+import { Reflector } from "@nestjs/core";
+import { AuthGuard } from "@nestjs/passport";
+import { Observable } from "rxjs";
+
+@Injectable()
+export class JwtGuard extends AuthGuard('jwt') {
+    constructor(private reflector: Reflector) {
+        super()
+    }
+
+
+    canActivate(context: ExecutionContext): boolean | Promise<boolean> | Observable<boolean> {
+
+        const isPublic = this.reflector.getAllAndOverride("isPublic", [
+            context.getHandler(),
+            context.getClass()
+        ])
+
+
+        if (isPublic) return true
+
+        return super.canActivate(context)
+    }
+}
+```
 ### paginations
 - All entities have a search class that extend the search query and we all also paginations utils, below is their shape
 
@@ -113,6 +144,59 @@ export class ReportQuery {
 }
 
 
+```
+
+### prisma module
+
+- service and module
+```ts
+
+import { Global, Module } from '@nestjs/common';
+import { PrismaService } from './prisma.service';
+
+@Global()
+@Module({
+    providers: [PrismaService],
+    exports: [PrismaService],
+})
+export class PrismaModule { }
+
+
+import { PrismaClient } from '@prisma/client';
+import { Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+
+@Injectable()
+export class PrismaService
+    extends PrismaClient
+    implements OnModuleInit, OnModuleDestroy {
+    farmmanagementactivity: any;
+    constructor(config: ConfigService) {
+        super({
+            datasources: {
+                db: {
+                    url: config.get<string>('DATABASE_URL'),
+                },
+            },
+        });
+        console.log('DATABASE_URL', Reflect.ownKeys(this).filter((key) => key[0] !== '_'));
+    }
+
+    async onModuleInit() {
+        await this.$connect();
+    }
+
+    async onModuleDestroy() {
+        await this.$disconnect();
+    }
+
+    async cleanDatabase() {
+        if (process.env.NODE_ENV === 'production') return;
+        const models = Reflect.ownKeys(this).filter((key) => key[0] !== '_');
+
+        return Promise.all(models.map((modelKey) => this[modelKey].deleteMany()));
+    }
+}
 ```
 
 # TODO

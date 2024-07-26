@@ -512,7 +512,7 @@ const generateDtosAndEntities = async () => {
                 namedImports: [`${modelName}Entity`],
                 moduleSpecifier: `./entities/${modelFolderName.toLowerCase()}.entity`,
             });
-             controllerFile.addImportDeclaration({
+            controllerFile.addImportDeclaration({
                 namedImports: [`ResultsPaginated`],
                 moduleSpecifier: `src/shared/paginations`,
             });
