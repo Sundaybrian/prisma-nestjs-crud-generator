@@ -296,6 +296,7 @@ const generateDtosAndEntities = async () => {
                     {
                         name: 'create',
                         isAsync: true,
+                        returnType: `Promise<${modelName}Entity>`,
                         parameters: [
                             { name: 'createDto', type: `Create${modelName}Dto` },
                         ],
@@ -304,6 +305,7 @@ const generateDtosAndEntities = async () => {
                     {
                         name: 'findAll',
                         isAsync: true,
+                        returnType: `Promise<ResultsPaginated<${modelName}Entity>>`,
                         parameters: [
                             { name: 'query', type: `${modelName}SearchQuery` },
                         ],
@@ -330,6 +332,7 @@ const generateDtosAndEntities = async () => {
                     {
                         name: 'findOne',
                         isAsync: true,
+                        returnType: `Promise<${modelName}Entity>`,
                         parameters: [
                             { name: 'id', type: 'number' },
                         ],
@@ -338,6 +341,7 @@ const generateDtosAndEntities = async () => {
                     {
                         name: 'update',
                         isAsync: true,
+                        returnType: `Promise<${modelName}Entity>`,
                         parameters: [
                             { name: 'id', type: 'number' },
                             { name: 'updateDto', type: `Update${modelName}Dto` },
@@ -347,6 +351,7 @@ const generateDtosAndEntities = async () => {
                     {
                         name: 'remove',
                         isAsync: true,
+                        returnType: `Promise<${modelName}Entity>`,
                         parameters: [
                             { name: 'id', type: 'number' },
                         ],
@@ -376,11 +381,15 @@ const generateDtosAndEntities = async () => {
                 moduleSpecifier: `./entities/${modelFolderName}.search`,
             });
             serviceFile.addImportDeclaration({
+                namedImports: [`${modelName}Entity`],
+                moduleSpecifier: `./entities/${modelFolderName}.entity`,
+            });
+            serviceFile.addImportDeclaration({
                 namedImports: ['Prisma'],
                 moduleSpecifier: '@prisma/client',
             });
             serviceFile.addImportDeclaration({
-                namedImports: ['pagination', 'getPagingData'],
+                namedImports: ['pagination', 'getPagingData', 'ResultsPaginated'],
                 moduleSpecifier: 'src/shared/paginations',
             });
 
