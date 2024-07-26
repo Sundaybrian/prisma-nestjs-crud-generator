@@ -1,9 +1,0 @@
-import { Module } from '@nestjs/common';
-import { __NAME__Service } from './__NAME__.service';
-import { __NAME__Controller } from './__NAME__.controller';
-
-@Module({
-  controllers: [__NAME__Controller],
-  providers: [__NAME__Service],
-})
-export class __NAME__Module {}

@@ -1,0 +1,43 @@
+// schema.prisma
+
+datasource db {
+  provider = "postgresql" // Specify your database provider
+  url      = env("DATABASE_URL") // Database connection URL from environment variables
+}
+
+generator client {
+  provider = "prisma-client-js" // Generate Prisma Client for JavaScript/TypeScript
+}
+
+model User {
+  id        Int      @id @default(autoincrement()) // Primary key with auto-increment
+  name      String   @db.VarChar(100) // User's name
+  email     String   @unique @db.VarChar(255) // Unique email
+  posts     Post[]   @relation("UserPosts") // One-to-many relationship with posts
+  comments  Comment[] @relation("UserComments") // One-to-many relationship with comments
+
+  @@index([email]) // Index on email for quick lookups
+}
+
+model Post {
+  id        Int      @id @default(autoincrement()) // Primary key with auto-increment
+  title     String   @db.VarChar(255) // Post title
+  content   String   // Post content
+  authorId  Int      // Foreign key to User
+  author    User     @relation("UserPosts", fields: [authorId], references: [id]) // Relation to User
+  comments  Comment[] @relation("PostComments") // One-to-many relationship with comments
+
+  @@index([authorId]) // Index on authorId for quick lookups
+}
+
+model Comment {
+  id        Int      @id @default(autoincrement()) // Primary key with auto-increment
+  content   String   // Comment content
+  postId    Int      // Foreign key to Post
+  post      Post     @relation("PostComments", fields: [postId], references: [id]) // Relation to Post
+  authorId  Int      // Foreign key to User
+  author    User     @relation("UserComments", fields: [authorId], references: [id]) // Relation to User
+
+  @@index([postId]) // Index on postId for quick lookups
+  @@index([authorId]) // Index on authorId for quick lookups
+}
