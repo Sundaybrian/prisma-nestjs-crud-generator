@@ -122,15 +122,20 @@ const generateDtosAndEntities = async () => {
         }).filter(Boolean); // Filter out null values
 
         // Create DTO class for Create operation
+        // Define properties to exclude for the Create DTO
+        // TODO: accept as input
+        const excludeProperties = ['id', 'creationDate', 'lastModifiedDate'];
         createDtoFile.addClass({
             name: `Create${modelName}Dto`,
             isExported: true,
-            properties: dtoProperties.map((prop) => ({
-                name: prop.name,
-                type: prop.type,
-                hasQuestionToken: prop.hasQuestionToken,
-                decorators: [...prop.classValidators, prop.swaggerDecorator],
-            })),
+            properties: dtoProperties
+                .filter(prop => !excludeProperties.includes(prop.name)) // Exclude unwanted properties
+                .map(prop => ({
+                    name: prop.name,
+                    type: prop.type,
+                    hasQuestionToken: prop.hasQuestionToken,
+                    decorators: [...prop.classValidators, prop.swaggerDecorator],
+                })),
         });
 
         // Create DTO class for Update operation using PartialType
