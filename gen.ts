@@ -2,6 +2,12 @@ import { Project, OptionalKind, DecoratorStructure } from 'ts-morph';
 import * as fs from 'fs';
 import * as path from 'path';
 
+
+function toCamelCase(pascalCaseString: string): string {
+    if (!pascalCaseString) return pascalCaseString;
+    return pascalCaseString[0].toLowerCase() + pascalCaseString.slice(1);
+}
+
 // Utility function to convert Prisma types to TypeScript types and corresponding class-validator decorators
 const prismaTypeToTsTypeAndDecorator = (prismaType: string) => {
     switch (prismaType) {
@@ -40,6 +46,7 @@ const generateDtosAndEntities = async () => {
         const modelName = model[1];
         const modelBody = model[2];
         const modelFolderName = modelName.toLowerCase();
+        const camelCaseModelName = toCamelCase(modelFolderName);
         const dtoFolderPath = path.join('src', modelFolderName, 'dto');
         const entityFolderPath = path.join('src', modelFolderName, 'entities');
         const searchFolderPath = path.join('src', modelFolderName);
@@ -184,19 +191,27 @@ const generateDtosAndEntities = async () => {
             decorators: [{ name: 'Injectable', arguments: [] }],
             ctors: [{
                 parameters: [
-                    { name: 'prisma', type: 'PrismaService', decorators: [{ name: 'Inject', arguments: ['PrismaService'] }] },
+                    {
+
+                        name: 'prisma', type: 'PrismaService',
+                        decorators: [{ name: 'Inject', arguments: ['PrismaService'] }],
+                        isReadonly: true,
+                        // scope: "",
+                    },
                 ],
             }],
             methods: [
                 {
                     name: 'create',
+                    isAsync: true,
                     parameters: [
                         { name: 'createDto', type: `Create${modelName}Dto` },
                     ],
-                    statements: `return this.prisma.${modelFolderName}.create({ data: createDto });`,
+                    statements: `return this.prisma.${camelCaseModelName}.create({ data: createDto });`,
                 },
                 {
                     name: 'findAll',
+                    isAsync: true,
                     parameters: [
                         { name: 'query', type: `${modelName}SearchQuery` },
                     ],
@@ -211,36 +226,39 @@ const generateDtosAndEntities = async () => {
                 });
 
                 const { take, skip } = pagination(page, size);
-                const items = await this.prisma.${modelFolderName}.findMany({
+                const items = await this.prisma.${camelCaseModelName}.findMany({
                     where: filters,
                     skip,
                     take,
                 });
 
-                const count = await this.prisma.${modelFolderName}.count({ where: filters });
+                const count = await this.prisma.${camelCaseModelName}.count({ where: filters });
                 return getPagingData({ count, rows: items }, page, size);`,
                 },
                 {
                     name: 'findOne',
+                    isAsync: true,
                     parameters: [
                         { name: 'id', type: 'number' },
                     ],
-                    statements: `return this.prisma.${modelFolderName}.findUnique({ where: { id } });`,
+                    statements: `return this.prisma.${camelCaseModelName}.findUnique({ where: { id } });`,
                 },
                 {
                     name: 'update',
+                    isAsync: true,
                     parameters: [
                         { name: 'id', type: 'number' },
                         { name: 'updateDto', type: `Update${modelName}Dto` },
                     ],
-                    statements: `return this.prisma.${modelFolderName}.update({ where: { id }, data: updateDto });`,
+                    statements: `return this.prisma.${camelCaseModelName}.update({ where: { id }, data: updateDto });`,
                 },
                 {
                     name: 'remove',
+                    isAsync: true,
                     parameters: [
                         { name: 'id', type: 'number' },
                     ],
-                    statements: `return this.prisma.${modelFolderName}.delete({ where: { id } });`,
+                    statements: `return this.prisma.${camelCaseModelName}.delete({ where: { id } });`,
                 },
             ],
         });
