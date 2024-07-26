@@ -436,7 +436,8 @@ const generateDtosAndEntities = async () => {
                         decorators: [
                             { name: 'Post', arguments: [`'search'`] },
                             { name: 'ApiOperation', arguments: [`{ summary: 'Search - ${modelFolderName.toLowerCase()}' }`] },
-                            { name: 'ApiOkResponse', arguments: [`{ type: ${modelName}Entity }`] },
+                            { name: 'ApiOkResponse', arguments: [`{ type: ResultsPaginated<[${modelName}Entity]>}`] },
+
                         ],
                         parameters: [
                             { name: 'query', type: `${modelName}SearchQuery`, decorators: [{ name: 'Body', arguments: [] }] },
@@ -510,6 +511,15 @@ const generateDtosAndEntities = async () => {
             controllerFile.addImportDeclaration({
                 namedImports: [`${modelName}Entity`],
                 moduleSpecifier: `./entities/${modelFolderName.toLowerCase()}.entity`,
+            });
+             controllerFile.addImportDeclaration({
+                namedImports: [`ResultsPaginated`],
+                moduleSpecifier: `src/shared/paginations`,
+            });
+
+            controllerFile.addImportDeclaration({
+                namedImports: [`JwtGuard`],
+                moduleSpecifier: `src/1_auth/guard`,
             });
 
             // Module file creation
